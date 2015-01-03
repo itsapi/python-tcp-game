@@ -1,13 +1,15 @@
 import socket
 from threading import Thread
+import json
 
 
 class Server:
-  def __init__(self):
+  def __init__(self, game):
     self.conn = socket.socket()
-    self.conn.bind(('0.0.0.0', 1339))
+    self.conn.bind(('0.0.0.0', 1338))
     self.conn.listen(5)
     
+    self.game = game
     self.clients = []
     self.running = True
     
@@ -38,13 +40,17 @@ class Server:
           raise err
 
   def handle(self, client, data):
+    data = json.loads(data.decode())
+    clients, data = self.game.handler[data['action']](client, data, self.clients)
+    self.send(clients, json.dumps(data).encode())
+  
+  def send(self, clients, data):
     print('Sending data')
-    for other_client in self.clients:
-      if other_client is not client:
-        try:
-          other_client.conn.send(data)
-        except socket.error:
-          self.term_client(other_client)
+    for client in clients:
+      try:
+        client.conn.send(data)
+      except socket.error:
+        self.term_client(client)
           
   def term_client(self, client):
     try:
@@ -62,6 +68,11 @@ class Client:
     self.server = server
     self.conn = conn
     self.addr = addr
+    self.data = {
+      'x': 0,
+      'y': 0
+    }
+    self.id = 0
     
     self.listener = Thread(target=self.listen)
     self.listener.start()
@@ -85,8 +96,26 @@ class Client:
     print('Terminated client')
 
 
+class Game:
+  def __init__(self):
+    self.handler = {
+      'move': self.move
+    }
+  
+  def move(self, client, data, clients):
+    client.data['x'] += data['dx']
+    client.data['y'] += data['dy']
+    return clients, {
+      'action': 'move',
+      'client': client.id,
+      'x': client.data['x'],
+      'y': client.data['y']
+    }
+
+
 def main():
-  server = Server()
+  game = Game()
+  server = Server(game)
 
 
 if __name__ == '__main__':
