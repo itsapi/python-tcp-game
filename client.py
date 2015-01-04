@@ -1,4 +1,4 @@
-import socket
+import socket, sys, json
 from threading import Thread
 
 
@@ -17,14 +17,21 @@ class Client:
         while self.running:
             data = self.conn.recv(1024)
             if data:
-                print(data.decode())
+                data = json.loads(data.decode())
+                print('{} is at ({}, {})'.format(data['client'], data['x'], data['y']))
             else:
                 self.terminate()
 
     def send(self):
         try:
             while True:
-                self.conn.send(input('> ').encode())
+                try:
+                    dx, dy = input('(dx dy)> ').split()
+                    data = json.dumps({'action': 'move', 'dx': int(dx), 'dy': int(dy)})
+                    self.conn.send(data.encode())
+                except ValueError:
+                    pass
+
         except KeyboardInterrupt:
             self.terminate()
 
