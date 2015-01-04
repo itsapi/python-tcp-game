@@ -47,7 +47,10 @@ class Client:
 
 
 def main():
-    c = Client(('192.168.43.8', 1338))
+    try:
+        c = Client((sys.argv[1], int(sys.argv[2])))
+    except IndexError:
+        print('Usage: {} host port'.format(sys.argv[0]))
 
 
 if __name__ == '__main__':
